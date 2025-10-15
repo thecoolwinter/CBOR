@@ -54,7 +54,7 @@ try encoder.encode([404: "Not Found"]) // Result: 0xA1190194694E6F7420466F756E64
 let decoder = CBORDecoder()
 let intValue = try decoder.decode(Int.self, from: Data([0])) // Result: 0
 // Result: ["AB": 1, "A": 2]
-let mapValue = try decoder.decode([String: Int].self.self, from: Data([162, 98, 65, 66, 1, 97, 65, 2]))
+let mapValue = try decoder.decode([String: Int].self, from: Data([162, 98, 65, 66, 1, 97, 65, 2]))
 ```
 
 The encoder and decoders can be customized via the en/decoder initializers or via a `En/DecodingOptions` struct.
