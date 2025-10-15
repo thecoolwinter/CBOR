@@ -35,12 +35,17 @@ The motivation for this library over existing implementations is twofold: perfor
 - Supports tagged items (will expand and add ability to inject your own tags in the future):
   - Dates
   - UUIDs
+  - [CIDs](https://github.com/multiformats/cid) (tag 42)
 - Flexible date parsing (tags `0` or `1` with support for any numeric value representation).
 - Decoding multiple top-level objects using `decodeMultiple(_:from:)`.
+- *NEW* IPLD compatible DAG-CBOR encoder for content addressable data.
+- *NEW* Flexible date decoding for untagged date items encoded as strings, floating point values, or integers.
 
 > Note: This is not a valid CBOR/CDE encoder, it merely always outputs countable collections. CBOR/CDE should be implemented in the future as it's quite similar.
 
 ## Usage
+
+### Standard CBOR
 
 This library utilizes Swift's `Codable` API for all (de)serialization operations. It intentionally doesn't support streaming CBOR blobs. After [installing](#installation) the package using Swift Package Manager, use the `CBOREncoder` and `CBORDecoder` types to encode to and decode from CBOR blobs, respectively.
 
@@ -76,7 +81,45 @@ let options = DecodingOptions(/* ... */)
 let decoder = CBORDecoder(options: options)
 ```
 
-[Documentation](https://swiftpackageindex.com/thecoolwinter/CBOR/1.0.1/documentation/cbor) is hosted on the Swift Package Index.
+### DAG-CBOR
+
+This library also offers the ability to encode and decode DAG-CBOR data. DAG-CBOR is a superset of the CBOR spec, though very similar. This library provides a `DAGCBOREncoder` type that is automatically configured to produce compatible data. The flags it sets are also available through the `EncodingOptions` struct, but using the specialized type will ensure safety.
+
+```swift
+// !! SEE NOTE !!
+let dagEncoder = DAGCBOREncoder(dateEncodingStrategy: .double)
+```
+
+To use, conform your internal CID type to ``CIDType``. **Do not conform standard types like `String` or `Data` to ``CIDType``**, or the encoder will attempt to encode all of those data as tagged items.
+```swift
+struct CID: CIDType, Encodable {
+    let bytes: [UInt8]
+    func cidData() throws -> [UInt8] {
+        // Often you'll want to re-encode your CID from a human readable 
+        // format to Base256.
+        return bytes
+    }
+}
+
+// Now, any time the encoder finds a `CID` type it will encode it using the
+// correct tag.
+let cid = CID(bytes: [0,1,2,3,4,5,6,7,8])
+let data = try DAGCBOREncoder().encode(cid)
+
+print(data.hexString())
+// Output:
+// D8 2A                      # tag(42)
+//    4A                      # bytes(10)
+//       00000102030405060708 # "\u0000\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b"
+```
+You **do not** need to prefix your data with the `NULL` character once encoded. This library will handle that for you. It is invalid encoding to not include the prefixed byte, so the encoder handles it.
+
+> [!NOTE]
+> DAG-CBOR does not allow tagged items (besides the CID item), and thus encoding dates must be done by encoding their 'raw' value directly. This is an application specific behavior, so ensure the encoder is using the correct date encoding behavior for compatibility. By default, the encoder will encode dates as an epoch `Double` timestamp.  
+
+## Documentation
+
+[Documentation](https://swiftpackageindex.com/thecoolwinter/CBOR/1.1.0/documentation/cbor) is hosted on the Swift Package Index.
 
 ## Installation
 

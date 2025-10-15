@@ -46,11 +46,21 @@ extension SingleValueCBOREncodingContainer: SingleValueEncodingContainer {
     }
 
     func encode(_ value: Double) throws {
+        guard !options.rejectInfAndNan && value.isNormal else {
+            throw EncodingError.invalidValue(
+                value,
+                context.error("Configured to reject Inf and NaN values. Found Infinite or NaN floating point value.")
+            )
+        }
         parent.register(DoubleOptimizer(value: value))
     }
 
     func encode(_ value: Float) throws {
-        parent.register(FloatOptimizer(value: value))
+        if options.forceDoubleLengthEncoding {
+            try encode(Double(value))
+        } else {
+            parent.register(FloatOptimizer(value: value))
+        }
     }
 
     func encode<T>(_ value: T) throws where T: Encodable, T: FixedWidthInteger {
@@ -62,16 +72,18 @@ extension SingleValueCBOREncodingContainer: SingleValueEncodingContainer {
         // function for any type, only the standard library types. This is the same method Foundation uses to detect
         // special encoding cases. It's still lame.
         switch value {
+        case let value as any CIDType:
+            parent.register(try CIDOptimizer(value))
         case let value as Date:
-            switch options.dateEncodingStrategy {
-            case .string:
-                parent.register(StringDateOptimizer(value: value))
-            case .float:
-                parent.register(EpochFloatDateOptimizer(value: value))
-            case .double:
-                parent.register(EpochDoubleDateOptimizer(value: value))
-            }
+            try _encodeDate(value)
         case let value as UUID:
+            guard options.taggedItemsStrategy != .dagMode else {
+                throw EncodingError.invalidValue(
+                    value,
+                    // swiftlint:disable:next line_length
+                    context.error("In DAG mode, all tagged items are rejected except tag 42. UUIDs are encoded as a tagged value by default. Override `encode` for your type and encode UUID with a different representation.")
+                )
+            }
             parent.register(UUIDOptimizer(value: value))
         case let value as Data:
             parent.register(ByteStringOptimizer(value: value))
@@ -81,6 +93,29 @@ extension SingleValueCBOREncodingContainer: SingleValueEncodingContainer {
 // #endif
         default:
             try value.encode(to: self)
+        }
+    }
+
+    func _encodeDate(_ value: Date) throws {
+        switch options.dateEncodingStrategy {
+        case .string:
+            if options.taggedItemsStrategy == .dagMode {
+                parent.register(StringDateOptimizer(value: value).optimizer)
+            } else {
+                parent.register(StringDateOptimizer(value: value))
+            }
+        case .float:
+            if options.taggedItemsStrategy == .dagMode {
+                parent.register(EpochFloatDateOptimizer(value: value).optimizer)
+            } else {
+                parent.register(EpochFloatDateOptimizer(value: value))
+            }
+        case .double:
+            if options.taggedItemsStrategy == .dagMode {
+                parent.register(EpochDoubleDateOptimizer(value: value).optimizer)
+            } else {
+                parent.register(EpochDoubleDateOptimizer(value: value))
+            }
         }
     }
 }

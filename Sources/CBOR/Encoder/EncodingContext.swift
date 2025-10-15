@@ -25,4 +25,8 @@ struct EncodingContext {
     func appending<Key: CodingKey>(_ key: Key) -> EncodingContext {
         EncodingContext(options: options, path: .child(key: key, parent: path))
     }
+
+    func error(_ description: String = "", error: Error? = nil) -> EncodingError.Context {
+        .init(codingPath: codingPath, debugDescription: description, underlyingError: error)
+    }
 }
