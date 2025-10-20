@@ -11,18 +11,29 @@
 /// To use, conform your internal CID type to ``CIDType``. Do not conform standard types like `String` or `Data` to
 /// ``CIDType``, or the encoder will attempt to encode all of those data as tagged items.
 /// ```swift
-/// struct CID: CIDType, Encodable {
-///     let bytes: [UInt8]
+/// struct CID: CIDType {
+///     let data: Data
 ///
-///     func cidData() throws -> [UInt8] {
-///         // Often you'll want to re-encode your CID from a human readable format to Base256.
-///         return bytes
+///     init(data: Data) {
+///         self.data = data
+///     }
+///
+///     init<Container: SingleValueDecodingContainer>(decodeTaggedDataUsing container: Container) throws {
+///         var data = try container.decode(Data.self)
+///         data.removeFirst()
+///         self.data = data
+///     }
+///     
+///     func encodeTaggedData<Container: SingleValueEncodingContainer>(using container: inout Container) throws {
+///         try container.encode(Data([0x0]) + data)
 ///     }
 /// }
 /// ```
-/// Note that you **do not** need to prefix your data with the `NULL` character once encoded. This library will
-/// handle that for you. It is invalid DAG-CBOR encoding to not include the prefixed byte.
-public protocol CIDType: Encodable {
-    associatedtype Bytes: Collection where Bytes.Element == UInt8
-    func cidData() throws -> Bytes
+/// Note that you **need** to prefix your data with the `NULL` character once encoded. This library will
+/// not handle that for you. It is invalid DAG-CBOR encoding to not include the prefixed byte.
+public protocol CIDType: TaggedCBORItem {}
+
+extension CIDType {
+    /// The tag for all CID types is `42`.
+    public static var tag: UInt { 42 }
 }

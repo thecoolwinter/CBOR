@@ -12,8 +12,8 @@ protocol EncodingOptimizer {
     var headerSize: Int { get }
     var contentSize: Int { get }
 
-    mutating func writeHeader(to data: inout Slice<UnsafeMutableRawBufferPointer>)
-    mutating func writePayload(to data: inout Slice<UnsafeMutableRawBufferPointer>)
+    func writeHeader(to data: inout Slice<UnsafeMutableRawBufferPointer>)
+    func writePayload(to data: inout Slice<UnsafeMutableRawBufferPointer>)
 }
 
 extension EncodingOptimizer {
@@ -22,7 +22,7 @@ extension EncodingOptimizer {
 
     var size: Int { 1 + headerSize + contentSize }
 
-    mutating func write(to data: inout Slice<UnsafeMutableRawBufferPointer>) {
+    func write(to data: inout Slice<UnsafeMutableRawBufferPointer>) {
         assert(data.count >= size)
 
         // Write the type & argument

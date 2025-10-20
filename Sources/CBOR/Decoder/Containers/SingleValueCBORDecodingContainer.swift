@@ -63,7 +63,7 @@ extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
     }
 
     func decode<T: Decodable & FixedWidthInteger>(_: T.Type) throws -> T {
-        try checkType(.uint, .nint)
+        try checkType(.uint, .nint, forType: T.self)
         let value = try data.readInt(as: T.self)
         if data.type == .nint {
             guard T.min < 0 else {
@@ -78,7 +78,7 @@ extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
     }
 
     func decode(_: String.Type) throws -> String {
-        try checkType(.string)
+        try checkType(.string, forType: String.self)
 
         if data.argument == Constants.indeterminateArg {
             return try decodeIndeterminateString()
@@ -190,21 +190,8 @@ extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
         }
     }
 
-    private func _decode(_: UUID.Type) throws -> UUID {
-        try checkType(.tagged, arguments: 24, as: UUID.self)
-        let taggedData = context.results.loadTagData(tagMapIndex: data.mapOffset)
-        let data = try SingleValueCBORDecodingContainer(context: context, data: taggedData).decode(Data.self)
-        guard data.count == 16 else { // UUID size + tag
-            throw DecodingError.dataCorruptedError(
-                in: self,
-                debugDescription: "Data decoded for UUID tag is not 16 bytes long."
-            )
-        }
-        return data.withUnsafeBytes { ptr in ptr.load(as: UUID.self) }
-    }
-
     private func _decode(_: Data.Type) throws -> Data {
-        try checkType(.bytes)
+        try checkType(.bytes, forType: Data.self)
 
         if data.argument == Constants.indeterminateArg {
             return try decodeIndeterminateData()
@@ -248,15 +235,21 @@ extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
     }
 
     func decode<T: Decodable>(_ type: T.Type) throws -> T {
+        // Unfortunate force unwraps here, but necessary
         // swiftlint:disable force_cast
-        return if T.self == Date.self {
-            try _decode(Date.self) as! T // Unfortunate force unwrap, but necessary
-        } else if T.self == UUID.self {
-            try _decode(UUID.self) as! T
+        if T.self == Date.self {
+            return try _decode(Date.self) as! T
         } else if T.self == Data.self {
-            try _decode(Data.self) as! T
+            return try _decode(Data.self) as! T
+        } else if let TaggedType = T.self as? TaggedCBORItem.Type {
+            try checkType(.tagged, forType: T.self)
+            try checkTag(TaggedType.tag, forType: T.self)
+            let taggedData = context.results.loadTagData(tagMapIndex: data.mapOffset)
+            return try TaggedType.init(
+                decodeTaggedDataUsing: SingleValueCBORDecodingContainer(context: context, data: taggedData)
+            ) as! T
         } else {
-            try T(from: self)
+            return try T(from: self)
         }
         // swiftlint:enable force_cast
     }

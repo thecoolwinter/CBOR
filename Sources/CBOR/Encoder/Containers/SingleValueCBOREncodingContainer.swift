@@ -46,7 +46,7 @@ extension SingleValueCBOREncodingContainer: SingleValueEncodingContainer {
     }
 
     func encode(_ value: Double) throws {
-        guard !options.rejectInfAndNan && value.isNormal else {
+        if options.rejectInfAndNan && (value.isInfinite || value.isNaN) {
             throw EncodingError.invalidValue(
                 value,
                 context.error("Configured to reject Inf and NaN values. Found Infinite or NaN floating point value.")
@@ -72,21 +72,12 @@ extension SingleValueCBOREncodingContainer: SingleValueEncodingContainer {
         // function for any type, only the standard library types. This is the same method Foundation uses to detect
         // special encoding cases. It's still lame.
         switch value {
-        case let value as any CIDType:
-            parent.register(try CIDOptimizer(value))
         case let value as Date:
             try _encodeDate(value)
-        case let value as UUID:
-            guard options.taggedItemsStrategy != .dagMode else {
-                throw EncodingError.invalidValue(
-                    value,
-                    // swiftlint:disable:next line_length
-                    context.error("In DAG mode, all tagged items are rejected except tag 42. UUIDs are encoded as a tagged value by default. Override `encode` for your type and encode UUID with a different representation.")
-                )
-            }
-            parent.register(UUIDOptimizer(value: value))
         case let value as Data:
             parent.register(ByteStringOptimizer(value: value))
+        case let value as TaggedCBORItem:
+            try _encodeTaggedItem(value, T.self)
 // #if canImport(Float16)
 //        case let value as Float16:
 //            parent.register(Float16Optimizer(value: value))
@@ -117,5 +108,17 @@ extension SingleValueCBOREncodingContainer: SingleValueEncodingContainer {
                 parent.register(EpochDoubleDateOptimizer(value: value))
             }
         }
+    }
+
+    func _encodeTaggedItem<T: Encodable>(_ value: TaggedCBORItem, _ type: T.Type) throws {
+        let tag = value.__staticTagLookup
+        guard options.taggedItemsStrategy == .accept || tag == 42 else {
+            throw EncodingError.invalidValue(
+                value,
+                // swiftlint:disable:next line_length
+                context.error("In DAG mode, all tagged items are rejected except tag 42. UUIDs are encoded as a tagged value by default. Override `encode` for your type and encode UUID with a different representation.")
+            )
+        }
+        parent.register(try TaggedItemOptimizer(value: value, context: context))
     }
 }

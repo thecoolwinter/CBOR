@@ -11,12 +11,6 @@ import FoundationEssentials
 import Foundation
 #endif
 
-private let taggedScanMap: [UInt: Set<MajorType>] = [
-    0: [.string],               // Date (string)
-    1: [.uint, .nint, .simple], // Date (epoch)
-    37: [.bytes],               // UUID
-]
-
 @usableFromInline
 enum ScanError: Error {
     case unexpectedEndOfData
@@ -221,29 +215,11 @@ struct CBORScanner {
     // MARK: - Scan Tagged
 
     private mutating func scanTagged(raw: UInt8) throws {
-        guard let size = reader.peekArgument()?.byteCount() else {
-            throw ScanError.invalidSize(byte: reader.peekArgument() ?? .max, offset: reader.index)
-        }
-        let offset = reader.index
-        results.recordType(raw, currentByteIndex: offset, length: Int(size))
-
-        let tag = try reader.readNextInt(as: UInt.self)
-
-        guard let validMajorTypes = taggedScanMap[tag] else {
-            throw ScanError.noTagInformation(tag: tag, offset: reader.index)
-        }
+        // Scan the tag number (passing the raw value here makes it record a Tag rather than an Int)
+        try scanInt(raw: raw)
 
         guard let nextRaw = reader.peek(), let nextTag = MajorType(rawValue: nextRaw) else {
             throw ScanError.unexpectedEndOfData
-        }
-
-        guard validMajorTypes.contains(nextTag) else {
-            throw ScanError.invalidMajorTypeForTaggedItem(
-                tag: tag,
-                expected: validMajorTypes,
-                found: nextTag,
-                offset: offset
-            )
         }
 
         try scanType(type: nextTag, raw: nextRaw)

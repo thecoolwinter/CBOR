@@ -26,7 +26,7 @@ struct StringDateOptimizer: EncodingOptimizer {
         #endif
     }
 
-    mutating func writePayload(to data: inout Slice<UnsafeMutableRawBufferPointer>) {
+    func writePayload(to data: inout Slice<UnsafeMutableRawBufferPointer>) {
         optimizer.write(to: &data)
     }
 }
@@ -42,7 +42,7 @@ struct EpochDoubleDateOptimizer: EncodingOptimizer {
         optimizer = DoubleOptimizer(value: value.timeIntervalSince1970)
     }
 
-    mutating func writePayload(to data: inout Slice<UnsafeMutableRawBufferPointer>) {
+    func writePayload(to data: inout Slice<UnsafeMutableRawBufferPointer>) {
         optimizer.write(to: &data)
     }
 }
@@ -58,7 +58,7 @@ struct EpochFloatDateOptimizer: EncodingOptimizer {
         optimizer = FloatOptimizer(value: Float(value.timeIntervalSince1970))
     }
 
-    mutating func writePayload(to data: inout Slice<UnsafeMutableRawBufferPointer>) {
+    func writePayload(to data: inout Slice<UnsafeMutableRawBufferPointer>) {
         optimizer.write(to: &data)
     }
 }

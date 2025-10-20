@@ -46,7 +46,7 @@ struct KeyedCBORDecodingContainer<Key: CodingKey>: DecodingContextContainer, Key
 
         var decodedKeys: [AnyKey: DataRegion] = [:]
 
-        try checkType(.map)
+        try checkType(.map, forType: Dictionary<String, Any>.self)
         guard let childCount = data.childCount else { fatalError("Map scanned but no child count recorded.") }
         decodedKeys.reserveCapacity(childCount / 2)
 

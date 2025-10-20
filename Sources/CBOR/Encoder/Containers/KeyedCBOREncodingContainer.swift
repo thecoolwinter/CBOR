@@ -66,6 +66,8 @@ extension KeyedCBOREncodingContainer {
         init(parent: ParentStorage, context: EncodingContext) {
             self.parent = parent
             self.context = context
+            map.reserveCapacity(4)
+            intMap.reserveCapacity(4)
         }
 
         private let parent: ParentStorage

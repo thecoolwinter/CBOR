@@ -95,7 +95,6 @@ struct EncodableTests {
         let data = "fa47c35000".asHexData()
         let result = try CBOREncoder().encode(value)
         #expect(data == result)
-        print(result.hexString())
     }
 
     @Test
@@ -104,7 +103,6 @@ struct EncodableTests {
         let data = "FB3FB9B089A0275254".asHexData()
         let result = try CBOREncoder().encode(value)
         #expect(data == result)
-        print(result.hexString())
     }
 
     @Test
@@ -249,5 +247,32 @@ struct EncodableTests {
         let encoder = CBOREncoder()
         let data = try encoder.encode(value)
         #expect(data == expectedData)
+    }
+
+    @Test
+    func `Duplicate keys are deduplicated on encode`() throws {
+        let encoder = CBOREncoder()
+        struct Mock: Encodable {
+            enum CodingKeys: String, CodingKey {
+                case one
+            }
+
+            func encode(to encoder: any Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(true, forKey: .one)
+                try container.encode(false, forKey: .one)
+            }
+        }
+
+        let data = try encoder.encode(Mock()).hexString()
+        #expect(data == "a1636f6e65f4")
+    }
+
+    @Test
+    func uuid() throws {
+        let uuid = UUID(uuidString: "A0BDA068-60AD-4111-B4C9-04746791028B")
+        let data = try CBOREncoder().encode(uuid).hexString()
+        let expected = "d82550a0bda06860ad4111b4c904746791028b"
+        #expect(data == expected)
     }
 }

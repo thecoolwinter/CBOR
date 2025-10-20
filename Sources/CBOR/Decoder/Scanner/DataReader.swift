@@ -64,7 +64,7 @@ struct DataReader {
 
     @inline(__always)
     func _peek() -> UInt8 {
-        data[_offset: index]
+        data[index]
     }
 
     @inline(__always)

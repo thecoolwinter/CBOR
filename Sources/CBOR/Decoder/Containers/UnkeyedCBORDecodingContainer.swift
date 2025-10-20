@@ -26,7 +26,7 @@ struct UnkeyedCBORDecodingContainer: DecodingContextContainer, UnkeyedDecodingCo
         self.context = context
         self.data = data
 
-        try checkType(.array)
+        try checkType(.array, forType: Array<Any>.self)
         guard let childCount = data.childCount else { fatalError("Array scanned but no child count recorded.") }
         self.count = childCount
         self.currentMapIndex = context.results.firstChildIndex(data.mapOffset)
