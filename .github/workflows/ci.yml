@@ -22,7 +22,7 @@ jobs:
     name: Testing CBOR (ubuntu)
     needs: swiftlint
     runs-on: ubuntu-latest
-    container: swift:6.2-noble
+    container: swift:6.0-noble
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -56,7 +56,7 @@ jobs:
         uses: actions/checkout@v5
       - uses: swift-actions/setup-swift@next
         with:
-          swift-version: "6.2"
+          swift-version: "6.0"
       - name: Restore .build
         id: "restore-build"
         uses: actions/cache/restore@v4

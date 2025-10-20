@@ -250,7 +250,7 @@ struct EncodableTests {
     }
 
     @Test
-    func `Duplicate keys are deduplicated on encode`() throws {
+    func duplicateKeysAreDeduplicatedOnEncode() throws {
         let encoder = CBOREncoder()
         struct Mock: Encodable {
             enum CodingKeys: String, CodingKey {

@@ -107,11 +107,11 @@ struct Profiling {
 
     func data() throws {
         try time {
-            for _ in 0..<1_000_000 {
+            for _ in 0..<1000 {
                 blackhole(try CBOREncoder().encode(Data([0x01, 0x02, 0x03, 0x04])))
             }
         } _: {
-            for _ in 0..<1_000_000 {
+            for _ in 0..<1000 {
                 blackhole(try JSONEncoder().encode(Data([0x01, 0x02, 0x03, 0x04])))
             }
         }

@@ -31,14 +31,14 @@ fileprivate struct CID: CIDType {
 @Suite
 struct DAGCBORTests {
     @Test
-    func `Custom CID Type Encoded Correctly`() throws {
+    func customCIDTypeEncodedCorrectly() throws {
         let cid = CID(data: [0, 1, 2, 3, 4, 5, 6, 7, 8])
         let data = try DAGCBOREncoder().encode(cid).hexString()
         #expect(data == "d82a4a00000102030405060708")
     }
 
     @Test
-    func `Known valid base256 encoded ID`() throws {
+    func knownValidBase256EncodedID() throws {
         let cid = CID(data: "017112209fe4ccc6de16724f3a30c7e8f254f3c6471986acb1f8d8cf8e96ce2ad7dbe7fb".asHexData())
         let data = try DAGCBOREncoder().encode(cid).hexString()
         let expected = "d82a582500017112209FE4CCC6DE16724F3A30C7E8F254F3C6471986ACB1F8D8CF8E96CE2AD7DBE7FB".lowercased()
@@ -139,7 +139,7 @@ struct DAGCBORTests {
     }
 
     @Test(arguments: [Double.nan, Double.infinity, -Double.infinity])
-    func `Nan and Infinite throw errors`(value: Double) throws {
+    func NanAndInfiniteThrowErrors(value: Double) throws {
         #expect(throws: EncodingError.self) {
             try DAGCBOREncoder().encode(value)
         }
@@ -284,7 +284,7 @@ struct DAGCBORTests {
     }
 
     @Test
-    func `Duplicate keys are deduplicated on encode`() throws {
+    func duplicateKeysAreDeduplicatedOnEncode() throws {
         let encoder = DAGCBOREncoder()
         struct Mock: Encodable {
             enum CodingKeys: String, CodingKey {
