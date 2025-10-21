@@ -27,7 +27,7 @@ public struct CBORDecoder {
     /// All parameters match flags in ``DecodingOptions``.
     public init(
         rejectIndeterminateLengths: Bool = true,
-        recursionDepth: Bool = false,
+        recursionDepth: Int = 50,
         rejectIntKeys: Bool = false,
         rejectUnorderedMap: Bool = false,
         rejectUndefined: Bool = false,
