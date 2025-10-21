@@ -62,7 +62,7 @@ jobs:
           key: "swiftpm-tests-build-${{ runner.os }}-${{ github.event.pull_request.base.sha || github.event.after }}"
           restore-keys: "swiftpm-tests-build-${{ runner.os }}-"
       - name: Building Package
-        run: set -o pipefail && swift build --build-tests | xcbeautify
+        run: set -o pipefail && swift build --build-tests | xcbeautify --renderer github-actions
 #        run: set -o pipefail && swift build --build-tests  // --sanitize fuzzer | xcbeautify
       - name: Cache .build
         if: steps.restore-build.outputs.cache-hit != 'true'

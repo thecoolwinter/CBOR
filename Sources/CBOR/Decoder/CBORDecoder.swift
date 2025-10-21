@@ -33,7 +33,7 @@ public struct CBORDecoder {
         rejectUndefined: Bool = false,
         rejectNaN: Bool = false,
         rejectInf: Bool = false,
-        singleTopLevelItem: Bool = false,
+        singleTopLevelItem: Bool = false
     ) {
         self.options = DecodingOptions(
             rejectIndeterminateLengths: rejectIndeterminateLengths,
