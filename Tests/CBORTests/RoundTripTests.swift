@@ -141,4 +141,12 @@ struct RoundTripTests {
         let decoded = try CBORDecoder().decode(UUID.self, from: encoded)
         #expect(decoded == value)
     }
+
+    @Test
+    func map() throws {
+        let value = ["a": 0]
+        let encoded = try CBOREncoder().encode(value)
+        let decoded = try CBORDecoder().decode([String: Int].self, from: encoded)
+        #expect(decoded == value)
+    }
 }

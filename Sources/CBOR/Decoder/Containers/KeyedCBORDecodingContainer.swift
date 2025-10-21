@@ -12,7 +12,7 @@ import Foundation
 #endif
 
 struct KeyedCBORDecodingContainer<Key: CodingKey>: DecodingContextContainer, KeyedDecodingContainerProtocol {
-    enum AnyKey: Hashable {
+    enum AnyKey: Hashable, Comparable {
         case int(Int)
         case string(String)
 
@@ -30,6 +30,21 @@ struct KeyedCBORDecodingContainer<Key: CodingKey>: DecodingContextContainer, Key
                 Key(intValue: int)
             case .string(let string):
                 Key(stringValue: string)
+            }
+        }
+
+        static func < (_ lhs: AnyKey, _ rhs: AnyKey) -> Bool {
+            switch (lhs, rhs) {
+            case let (.string(lhs), .string(rhs)):
+                if lhs.count == rhs.count {
+                    return lhs < rhs
+                }
+                return lhs.count < rhs.count
+            case let (.int(lhs), .int(rhs)):
+                return lhs < rhs
+            default:
+                print("Bruh")
+                return false
             }
         }
     }
@@ -51,11 +66,17 @@ struct KeyedCBORDecodingContainer<Key: CodingKey>: DecodingContextContainer, Key
         decodedKeys.reserveCapacity(childCount / 2)
 
         var mapOffset = context.results.firstChildIndex(data.mapOffset)
+        var lastKey: AnyKey?
         for _ in 0..<childCount / 2 {
             let key = context.results.load(at: mapOffset)
             let decodedKey: AnyKey
             switch key.type {
             case .uint, .nint:
+                guard !context.options.rejectIntKeys else {
+                    throw DecodingError.typeMismatch(String.self, context.error(
+                        "Configured to reject integer keys, found integer key in map at \(data.globalIndex)."
+                    ))
+                }
                 let intVal = try SingleValueCBORDecodingContainer(context: context, data: key).decode(Int.self)
                 decodedKey = AnyKey.int(intVal)
             case .string:
@@ -72,7 +93,19 @@ struct KeyedCBORDecodingContainer<Key: CodingKey>: DecodingContextContainer, Key
             let value = context.results.load(at: mapOffset)
             mapOffset = context.results.siblingIndex(mapOffset)
 
+            guard decodedKeys[decodedKey] == nil else {
+                throw DecodingError.dataCorrupted(context.error("Duplicate map keys found: \(decodedKey)"))
+            }
+
+            if context.options.rejectUnorderedMap && lastKey != nil && lastKey! > decodedKey {
+                throw DecodingError.dataCorrupted(context.error(
+                    "Configured to reject unordered map, found '\(decodedKey)' after"
+                    + "'\(String(describing: lastKey))', which is invalid."
+                ))
+            }
+
             decodedKeys[decodedKey] = value
+            lastKey = decodedKey
         }
 
         self.decodedKeys = decodedKeys

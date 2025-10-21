@@ -16,6 +16,8 @@ struct SingleValueCBORDecodingContainer: DecodingContextContainer {
     let data: DataRegion
 }
 
+// MARK: - Decoder
+
 extension SingleValueCBORDecodingContainer: Decoder {
     func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> where Key: CodingKey {
         try KeyedDecodingContainer(KeyedCBORDecodingContainer(context: context, data: data))
@@ -31,13 +33,35 @@ extension SingleValueCBORDecodingContainer: Decoder {
 }
 
 extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
+    // MARK: - Nil
+
     func decodeNil() -> Bool {
         data.isNil()
     }
 
+    // MARK: - Bool
+
     func decode(_: Bool.Type) throws -> Bool {
         let argument = try checkType(.simple, arguments: 20, 21, as: Bool.self)
         return argument == 21
+    }
+
+    // MARK: - Floating Points
+
+    /// Helper for checking floats against decoding flags.
+    @inline(__always)
+    private func checkFloatValidity<T: FloatingPoint>(_ value: T) throws -> T {
+        if context.options.rejectNaN && value.isNaN {
+            throw DecodingError.dataCorrupted(context.error("Found NaN \(T.self), configured to reject NaN values."))
+        }
+
+        if context.options.rejectInf && value.isInfinite {
+            throw DecodingError.dataCorrupted(
+                context.error("Found \(value) \(T.self), configured to reject Infinite values.")
+            )
+        }
+
+        return value
     }
 
     func decode(_: Float.Type) throws -> Float {
@@ -49,18 +73,20 @@ extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
                     context.error("Could not decode half-precision float into Swift Float.")
                 )
             }
-            return value
+            return try checkFloatValidity(value)
         }
 
         let floatRaw = try data.read(as: UInt32.self)
-        return Float(bitPattern: floatRaw)
+        return try checkFloatValidity(Float(bitPattern: floatRaw))
     }
 
     func decode(_: Double.Type) throws -> Double {
         try checkType(.simple, arguments: 27, as: Double.self)
         let doubleRaw = try data.read(as: UInt64.self).littleEndian
-        return Double(bitPattern: doubleRaw)
+        return try checkFloatValidity(Double(bitPattern: doubleRaw))
     }
+
+    // MARK: - Integers
 
     func decode<T: Decodable & FixedWidthInteger>(_: T.Type) throws -> T {
         try checkType(.uint, .nint, forType: T.self)
@@ -76,6 +102,31 @@ extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
         }
         return value
     }
+
+    @available(macOS 15.0, *)
+    func decode(_ type: Int128.Type) throws -> Int128 {
+        try checkType(.uint, .nint, forType: Int128.self)
+        let value = try data.readInt(as: Int128.self)
+        if data.type == .nint {
+            return -1 - value
+        }
+        return value
+    }
+
+    @available(macOS 15.0, *)
+    func decode(_ type: UInt128.Type) throws -> UInt128 {
+        try checkType(.uint, .nint, forType: UInt128.self)
+        let value = try data.readInt(as: UInt128.self)
+        if data.type == .nint {
+            throw DecodingError.typeMismatch(
+                Int.self,
+                context.error("Found a negative integer while attempting to decode an unsigned int \(UInt128.self).")
+            )
+        }
+        return value
+    }
+
+    // MARK: - String
 
     func decode(_: String.Type) throws -> String {
         try checkType(.string, forType: String.self)
@@ -128,6 +179,8 @@ extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
         }
         return string
     }
+
+    // MARK: - Date
 
     // Attempt first to decode a tagged date value, then move on and try decoding any of the following as a date:
     // - Int
@@ -190,6 +243,8 @@ extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
         }
     }
 
+    // MARK: - Data
+
     private func _decode(_: Data.Type) throws -> Data {
         try checkType(.bytes, forType: Data.self)
 
@@ -233,6 +288,8 @@ extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
         }
         return string
     }
+
+    // MARK: - Decode
 
     func decode<T: Decodable>(_ type: T.Type) throws -> T {
         // Unfortunate force unwraps here, but necessary

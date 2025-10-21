@@ -19,6 +19,11 @@ struct SingleValueCBOREncodingContainer<Storage: TemporaryEncodingStorage>: Enco
     var options: EncodingOptions { context.options }
     var codingPath: [CodingKey] { context.codingPath }
 
+    init(parent: Storage, context: EncodingContext) throws {
+        self.parent = parent
+        self.context = context
+    }
+
     func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key: CodingKey {
         .init(KeyedCBOREncodingContainer(parent: parent, context: context))
     }
@@ -64,6 +69,16 @@ extension SingleValueCBOREncodingContainer: SingleValueEncodingContainer {
     }
 
     func encode<T>(_ value: T) throws where T: Encodable, T: FixedWidthInteger {
+        parent.register(IntOptimizer(value: value))
+    }
+
+    @available(macOS 15.0, *)
+    func encode(_ value: Int128) throws {
+        parent.register(IntOptimizer(value: value))
+    }
+
+    @available(macOS 15.0, *)
+    func encode(_ value: UInt128) throws {
         parent.register(IntOptimizer(value: value))
     }
 

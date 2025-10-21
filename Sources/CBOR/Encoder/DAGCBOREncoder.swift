@@ -39,7 +39,7 @@ public struct DAGCBOREncoder {
         let tempStorage = TopLevelTemporaryEncodingStorage()
 
         let encodingContext = EncodingContext(options: options)
-        let encoder = SingleValueCBOREncodingContainer(parent: tempStorage, context: encodingContext)
+        let encoder = try SingleValueCBOREncodingContainer(parent: tempStorage, context: encodingContext)
         try encoder.encode(value)
 
         let dataSize = tempStorage.value.size

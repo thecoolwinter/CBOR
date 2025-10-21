@@ -8,18 +8,46 @@
 @inlinable
 func KeyedOptimizer(value: [String: EncodingOptimizer]) -> EncodingOptimizer {
     if value.count < Constants.maxArgSize {
-        return SmallKeyedOptimizer(value: value, optimizer: { StringOptimizer(value: $0) })
+        return SmallKeyedOptimizer(
+            value: value,
+            orderedUsing: { lhs, rhs in
+                if lhs.key.count == rhs.key.count {
+                    return lhs.key < rhs.key
+                }
+
+                return lhs.key.count < rhs.key.count
+            },
+            optimizer: { StringOptimizer(value: $0) }
+        )
     } else {
-        return LargeKeyedOptimizer(value: value, optimizer: { StringOptimizer(value: $0) })
+        return LargeKeyedOptimizer(
+            value: value,
+            orderedUsing: { lhs, rhs in
+                if lhs.key.count == rhs.key.count {
+                    return lhs.key < rhs.key
+                }
+
+                return lhs.key.count < rhs.key.count
+            },
+            optimizer: { StringOptimizer(value: $0) }
+        )
     }
 }
 
 @inlinable
 func KeyedOptimizer(value: [Int: EncodingOptimizer]) -> EncodingOptimizer {
     if value.count < Constants.maxArgSize {
-        return SmallKeyedOptimizer(value: value, optimizer: { IntOptimizer(value: $0) })
+        return SmallKeyedOptimizer(
+            value: value,
+            orderedUsing: { $0.key < $1.key },
+            optimizer: { IntOptimizer(value: $0) }
+        )
     } else {
-        return LargeKeyedOptimizer(value: value, optimizer: { IntOptimizer(value: $0) })
+        return LargeKeyedOptimizer(
+            value: value,
+            orderedUsing: { $0.key < $1.key },
+            optimizer: { IntOptimizer(value: $0) }
+        )
     }
 }
 
@@ -41,12 +69,16 @@ struct SmallKeyedOptimizer<KeyType: Comparable & Hashable>: EncodingOptimizer {
     @usableFromInline var contentSize: Int
 
     @usableFromInline
-    init(value: [KeyType: EncodingOptimizer], optimizer: (KeyType) -> EncodingOptimizer) {
+    init(
+        value: [KeyType: EncodingOptimizer],
+        orderedUsing: ((key: KeyType, value: EncodingOptimizer), (key: KeyType, value: EncodingOptimizer)) -> Bool,
+        optimizer: (KeyType) -> EncodingOptimizer
+    ) {
         var size = 0
         var array: [KeyValue] = []
         array.reserveCapacity(value.count)
 
-        self.value = value.sorted(by: { $0.key < $1.key }).reduce(into: array, { array, keyValue in
+        self.value = value.sorted(by: orderedUsing).reduce(into: array, { array, keyValue in
             let optimized = KeyValue(key: optimizer(keyValue.key), value: keyValue.value)
             size += optimized.size
             array.append(optimized)
@@ -74,12 +106,16 @@ struct LargeKeyedOptimizer<KeyType: Comparable & Hashable>: EncodingOptimizer {
     @usableFromInline var contentSize: Int
 
     @usableFromInline
-    init(value: [KeyType: EncodingOptimizer], optimizer: (KeyType) -> EncodingOptimizer) {
+    init(
+        value: [KeyType: EncodingOptimizer],
+        orderedUsing: ((key: KeyType, value: EncodingOptimizer), (key: KeyType, value: EncodingOptimizer)) -> Bool,
+        optimizer: (KeyType) -> EncodingOptimizer
+    ) {
         var size = 0
         var array: [KeyValue] = []
         array.reserveCapacity(value.count)
 
-        self.value = value.sorted(by: { $0.key < $1.key }).reduce(into: array, { array, keyValue in
+        self.value = value.sorted(by: orderedUsing).reduce(into: array, { array, keyValue in
             let optimized = KeyValue(key: optimizer(keyValue.key), value: keyValue.value)
             size += optimized.size
             array.append(optimized)

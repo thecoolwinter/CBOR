@@ -22,7 +22,7 @@ struct TaggedItemOptimizer: EncodingOptimizer {
 
     init(value: TaggedCBORItem, context: EncodingContext) throws {
         let storage = TopLevelTemporaryEncodingStorage()
-        var container = SingleValueCBOREncodingContainer(parent: storage, context: context)
+        var container = try SingleValueCBOREncodingContainer(parent: storage, context: context)
         try value.encodeTaggedData(using: &container)
         sizeOptimizer = IntOptimizer(value: Swift.type(of: value).tag)
         optimizer = storage.value
