@@ -45,7 +45,7 @@ public struct DecodingOptions {
         rejectUndefined: Bool = false,
         rejectNaN: Bool = false,
         rejectInf: Bool = false,
-        singleTopLevelItem: Bool = false,
+        singleTopLevelItem: Bool = false
     ) {
         self.rejectIndeterminateLengths = rejectIndeterminateLengths
         self.recursionDepth = recursionDepth
