@@ -32,8 +32,8 @@ struct SmallUnkeyedOptimizer: EncodingOptimizer {
     }
 
     @usableFromInline
-    mutating func writePayload(to data: inout Slice<UnsafeMutableRawBufferPointer>) {
-        for var optimizer in value {
+    func writePayload(to data: inout Slice<UnsafeMutableRawBufferPointer>) {
+        for optimizer in value {
             optimizer.write(to: &data)
         }
     }
@@ -64,8 +64,8 @@ struct LargeUnkeyedOptimizer: EncodingOptimizer {
     }
 
     @usableFromInline
-    mutating func writePayload(to data: inout Slice<UnsafeMutableRawBufferPointer>) {
-        for var optimizer in value {
+    func writePayload(to data: inout Slice<UnsafeMutableRawBufferPointer>) {
+        for optimizer in value {
             optimizer.write(to: &data)
         }
     }

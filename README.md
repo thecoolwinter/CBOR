@@ -32,15 +32,17 @@ The motivation for this library over existing implementations is twofold: perfor
 - Supports decoding half precision floats (Float16) as a regular Float.
 - Runs on Linux, Android, and Windows using the swift-foundation project when available.
 - Fuzz tested for reliability against crashes.
-- Supports tagged items (will expand and add ability to inject your own tags in the future):
-  - Dates
-  - UUIDs
+- ***NEW*** Supports tagged items with custom tag injection.
+  - Dates are a special case, handled by the library.
+  - Contains UUID example implementation.
 - Flexible date parsing (tags `0` or `1` with support for any numeric value representation).
 - Decoding multiple top-level objects using `decodeMultiple(_:from:)`.
-
-> Note: This is not a valid CBOR/CDE encoder, it merely always outputs countable collections. CBOR/CDE should be implemented in the future as it's quite similar.
+- ***NEW*** IPLD compatible DAG-CBOR encoder for content addressable data.
+- ***NEW*** Flexible date decoding for untagged date items encoded as strings, floating point values, or integers.
 
 ## Usage
+
+### Standard CBOR
 
 This library utilizes Swift's `Codable` API for all (de)serialization operations. It intentionally doesn't support streaming CBOR blobs. After [installing](#installation) the package using Swift Package Manager, use the `CBOREncoder` and `CBORDecoder` types to encode to and decode from CBOR blobs, respectively.
 
@@ -76,7 +78,60 @@ let options = DecodingOptions(/* ... */)
 let decoder = CBORDecoder(options: options)
 ```
 
-[Documentation](https://swiftpackageindex.com/thecoolwinter/CBOR/1.0.1/documentation/cbor) is hosted on the Swift Package Index.
+### DAG-CBOR
+
+This library also offers the ability to encode and decode DAG-CBOR data. DAG-CBOR is a superset of the CBOR spec, though very similar. This library provides a `DAGCBOREncoder` type that is automatically configured to produce compatible data. The flags it sets are also available through the `EncodingOptions` struct, but using the specialized type will ensure safety.
+
+```swift
+// !! SEE NOTE !!
+let dagEncoder = DAGCBOREncoder(dateEncodingStrategy: .double)
+```
+
+> [!NOTE]
+> DAG-CBOR does not allow tagged items (besides the CID item), and thus encoding dates must be done by encoding their 'raw' value directly. This is an application specific behavior, so ensure the encoder is using the correct date encoding behavior for compatibility. By default, the encoder will encode dates as an epoch `Double` timestamp.  
+
+To use with CIDs, conform your internal CID type to ``CIDType``. Do not conform standard types like `String` or `Data` to ``CIDType``, or the encoder may attempt to encode all of those data as tagged items.
+```swift
+struct CID: CIDType {
+    let data: Data
+
+    init(data: Data) {
+        self.data = data
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        var data = try container.decode(Data.self)
+        data.removeFirst()
+        self.data = data
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(Data([0x0]) + data)
+    }
+}
+```
+
+>   [!WARNING]
+>
+>   It's *your* responsibility to correctly encode CIDs in the data container. That includes the `NULL` byte for raw binary CID encoding (which DAG-CBOR expects).
+
+Now, any time the encoder finds a `CID` type it will encode it using the correct tag.
+```swift
+let cid = CID(bytes: [0,1,2,3,4,5,6,7,8])
+let data = try DAGCBOREncoder().encode(cid)
+
+print(data.hexString())
+// Output:
+// D8 2A                      # tag(42)
+//    4A                      # bytes(10)
+//       00000102030405060708 # "\u0000\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b"
+```
+
+## Documentation
+
+[Documentation](https://swiftpackageindex.com/thecoolwinter/CBOR/1.1.0/documentation/cbor) is hosted on the Swift Package Index.
 
 ## Installation
 
@@ -84,7 +139,7 @@ You can use the Swift Package Manager to download and import the library into yo
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/thecoolwinter/CBOR.git", from: "1.0.0")
+    .package(url: "https://github.com/thecoolwinter/CBOR.git", from: "1.1.0")
 ]
 ```
 

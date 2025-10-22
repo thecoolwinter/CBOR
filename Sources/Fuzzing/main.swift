@@ -70,5 +70,14 @@ public func fuzz(_ start: UnsafeRawPointer, _ count: Int) -> CInt {
     // Any decodable
     tryDecode(AnyDecodable.self)
 
+    // Encode
+    do {
+        try blackhole(CBOREncoder().encode(Data(bytes: start, count: count)))
+        try blackhole(DAGCBOREncoder().encode(Data(bytes: start, count: count)))
+    } catch {
+        print("Failed to encode")
+        return -1
+    }
+
     return 0
 }

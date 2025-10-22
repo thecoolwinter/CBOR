@@ -1,6 +1,6 @@
 import Foundation
 import Benchmark
-import SwiftCBOR
+//import SwiftCBOR
 import CBOR
 
 typealias EncoderObject = CBOREncoder

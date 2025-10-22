@@ -10,4 +10,5 @@ enum CommonTags: UInt {
     case stringDate = 0
     case epochDate = 1
     case uuid = 37
+    case cid = 42
 }

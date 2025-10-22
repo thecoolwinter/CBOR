@@ -11,25 +11,6 @@ import FoundationEssentials
 import Foundation
 #endif
 
-private let taggedScanMap: [UInt: Set<MajorType>] = [
-    0: [.string],               // Date (string)
-    1: [.uint, .nint, .simple], // Date (epoch)
-    37: [.bytes],               // UUID
-]
-
-@usableFromInline
-enum ScanError: Error {
-    case unexpectedEndOfData
-    case invalidMajorType(byte: UInt8, offset: Int)
-    case invalidSize(byte: UInt8, offset: Int)
-    case expectedMajorType(offset: Int)
-    case typeInIndeterminateString(type: MajorType, offset: Int)
-    case rejectedIndeterminateLength(type: MajorType, offset: Int)
-    case cannotRepresentInt(max: UInt, found: UInt, offset: Int)
-    case noTagInformation(tag: UInt, offset: Int)
-    case invalidMajorTypeForTaggedItem(tag: UInt, expected: Set<MajorType>, found: MajorType, offset: Int)
-}
-
 /// # Why Scan?
 /// I'd have loved to use a 'pop' method for decoding, where we only decode as data is requested. However, the way
 /// Swift's decoding APIs work forces us to be able to be able to do random access for keys in maps, which requires
@@ -58,14 +39,23 @@ struct CBORScanner {
 
     consuming func scan() throws -> Results {
         while !reader.isEmpty {
+            if options.singleTopLevelItem && reader.index > 0 {
+                throw ScanError.unreadDataAfterEnd
+            }
+
             let idx = reader.index
-            try scanNext()
+            try scanNext(depth: 0)
             assert(idx < reader.index, "Scanner made no forward progress in scan")
         }
+
+        if options.singleTopLevelItem && !reader.isEmpty {
+            throw ScanError.unreadDataAfterEnd
+        }
+
         return results
     }
 
-    private mutating func scanNext() throws {
+    private mutating func scanNext(depth: Int) throws {
         guard let type = reader.peekType(), let raw = reader.peek() else {
             if reader.isEmpty {
                 throw ScanError.unexpectedEndOfData
@@ -74,10 +64,14 @@ struct CBORScanner {
             }
         }
 
-        try scanType(type: type, raw: raw)
+        guard depth < options.recursionDepth else {
+            throw ScanError.recursionLimit
+        }
+
+        try scanType(type: type, raw: raw, depth: depth)
     }
 
-    private mutating func scanType(type: MajorType, raw: UInt8) throws {
+    private mutating func scanType(type: MajorType, raw: UInt8, depth: Int) throws {
         switch type {
         case .uint, .nint:
             try scanInt(raw: raw)
@@ -86,13 +80,13 @@ struct CBORScanner {
         case .string:
             try scanBytesOrString(.string, raw: raw)
         case .array:
-            try scanArray()
+            try scanArray(depth: depth)
         case .map:
-            try scanMap()
+            try scanMap(depth: depth)
         case .simple:
             try scanSimple(raw: raw)
         case .tagged:
-            try scanTagged(raw: raw)
+            try scanTagged(raw: raw, depth: depth)
         }
     }
 
@@ -109,6 +103,10 @@ struct CBORScanner {
     // MARK: - Scan Simple
 
     private mutating func scanSimple(raw: UInt8) throws {
+        guard !(options.rejectUndefined && reader.peekArgument() == 23) else {
+            throw ScanError.rejectedUndefined
+        }
+
         let idx = reader.index
         results.recordSimple(reader.pop(), currentByteIndex: idx)
         guard reader.canRead(raw.simpleLength()) else {
@@ -156,12 +154,12 @@ struct CBORScanner {
 
     // MARK: - Scan Array
 
-    private mutating func scanArray() throws {
+    private mutating func scanArray(depth: Int) throws {
         guard peekIsIndeterminate() else {
             let size = try reader.readNextInt(as: Int.self)
             let mapIdx = results.recordArrayStart(currentByteIndex: reader.index)
             for _ in 0..<size {
-                try scanNext()
+                try scanNext(depth: depth + 1)
             }
             results.recordEnd(childCount: size, resultLocation: mapIdx, currentByteIndex: reader.index)
             return
@@ -175,7 +173,7 @@ struct CBORScanner {
         reader.pop() // Pop type
         var count = 0
         while reader.peek() != Constants.breakCode {
-            try scanNext()
+            try scanNext(depth: depth + 1)
             count += 1
         }
         // Pop the break byte
@@ -185,7 +183,7 @@ struct CBORScanner {
 
     // MARK: - Scan Map
 
-    private mutating func scanMap() throws {
+    private mutating func scanMap(depth: Int) throws {
         guard peekIsIndeterminate() else {
             let keyCount = try reader.readNextInt(as: Int.self)
             guard keyCount < Int.max / 2 else {
@@ -195,7 +193,7 @@ struct CBORScanner {
             let size = keyCount * 2
             let mapIdx = results.recordMapStart(currentByteIndex: reader.index)
             for _ in 0..<size {
-                try scanNext()
+                try scanNext(depth: depth + 1)
             }
             results.recordEnd(childCount: size, resultLocation: mapIdx, currentByteIndex: reader.index)
             return
@@ -209,8 +207,8 @@ struct CBORScanner {
         reader.pop() // Pop type
         var count = 0
         while reader.peek() != Constants.breakCode {
-            try scanNext() // Maps should always have a multiple of two values.
-            try scanNext()
+            try scanNext(depth: depth + 1) // Maps should always have a multiple of two values.
+            try scanNext(depth: depth + 1)
             count += 2
         }
         // Pop the break byte
@@ -220,33 +218,15 @@ struct CBORScanner {
 
     // MARK: - Scan Tagged
 
-    private mutating func scanTagged(raw: UInt8) throws {
-        guard let size = reader.peekArgument()?.byteCount() else {
-            throw ScanError.invalidSize(byte: reader.peekArgument() ?? .max, offset: reader.index)
-        }
-        let offset = reader.index
-        results.recordType(raw, currentByteIndex: offset, length: Int(size))
-
-        let tag = try reader.readNextInt(as: UInt.self)
-
-        guard let validMajorTypes = taggedScanMap[tag] else {
-            throw ScanError.noTagInformation(tag: tag, offset: reader.index)
-        }
+    private mutating func scanTagged(raw: UInt8, depth: Int) throws {
+        // Scan the tag number (passing the raw value here makes it record a Tag rather than an Int)
+        try scanInt(raw: raw)
 
         guard let nextRaw = reader.peek(), let nextTag = MajorType(rawValue: nextRaw) else {
             throw ScanError.unexpectedEndOfData
         }
 
-        guard validMajorTypes.contains(nextTag) else {
-            throw ScanError.invalidMajorTypeForTaggedItem(
-                tag: tag,
-                expected: validMajorTypes,
-                found: nextTag,
-                offset: offset
-            )
-        }
-
-        try scanType(type: nextTag, raw: nextRaw)
+        try scanType(type: nextTag, raw: nextRaw, depth: depth)
     }
 }
 

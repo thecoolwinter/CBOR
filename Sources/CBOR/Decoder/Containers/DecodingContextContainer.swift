@@ -37,9 +37,20 @@ extension DecodingContextContainer {
 
     /// Check the next type on the data stack.
     /// - Parameter type: The type to check for.
-    func checkType(_ types: MajorType...) throws {
+    func checkType<T>(_ types: MajorType..., forType: T.Type) throws {
         guard types.contains(data.type) else {
-            throw DecodingError.typeMismatch(Bool.self, context.error("Unexpected type found: \(data.type)."))
+            throw DecodingError.typeMismatch(T.self, context.error("Unexpected type found: \(data.type)."))
+        }
+    }
+
+    /// Check an available tag value by reading either the argument or the next int value.
+    func checkTag<T>(_ tag: UInt, forType: T.Type) throws {
+        let tagValue = try data.readInt(as: UInt.self)
+        guard tagValue == tag else {
+            throw DecodingError.typeMismatch(
+                T.self,
+                context.error("Unexpected tag found: \(tagValue), expected \(tag) for \(T.self)")
+            )
         }
     }
 }

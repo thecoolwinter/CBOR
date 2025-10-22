@@ -1,0 +1,1 @@
+swift package --allow-writing-to-package-directory benchmark baseline update swiftcbor

@@ -51,12 +51,13 @@ extension UnkeyedCBOREncodingContainer {
     private final class KeyBuffer {
         var count: Int { items.count }
 
-        let parent: ParentStorage
-        var items: [EncodingOptimizer] = []
+        private let parent: ParentStorage
+        private var items: [EncodingOptimizer] = []
 
         init(parent: ParentStorage) {
             self.parent = parent
             self.items = []
+            items.reserveCapacity(10)
         }
 
         func forAppending() -> Indexed {

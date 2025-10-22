@@ -7,21 +7,11 @@ let package = Package(
     products: [
         .library(name: "CBOR", targets: ["CBOR"])
     ],
-    dependencies: [
-        // Heap
-        .package(url: "https://github.com/apple/swift-collections.git", from: "1.2.0"),
-    ],
+    dependencies: [],
     targets: [
-        .target(
-            name: "CBOR",
-            dependencies: [
-                .product(name: "Collections", package: "swift-collections")
-            ]
-        ),
-        .executableTarget(
-            name: "Fuzzing",
-            dependencies: ["CBOR"]
-        ),
+        .target(name: "CBOR"),
+        .executableTarget(name: "Fuzzing", dependencies: ["CBOR"]),
+        .executableTarget(name: "ProfilingHelper", dependencies: ["CBOR"]),
         .testTarget(
             name: "CBORTests",
             dependencies: ["CBOR"]

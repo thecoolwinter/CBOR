@@ -19,8 +19,8 @@ struct KeyedCBOREncodingContainer<
         self.context = context
     }
 
-    func encoder(for key: CodingKey) -> SingleValueCBOREncodingContainer<KeyBuffer.Keyed> {
-        return .init(parent: storage.withKey(key), context: context.appending(key))
+    func encoder(for key: CodingKey) throws -> SingleValueCBOREncodingContainer<KeyBuffer.Keyed> {
+        return try .init(parent: storage.withKey(key), context: context.appending(key))
     }
 
     func encode<T>(_ value: T, forKey key: Key) throws where T: Encodable {
@@ -66,6 +66,8 @@ extension KeyedCBOREncodingContainer {
         init(parent: ParentStorage, context: EncodingContext) {
             self.parent = parent
             self.context = context
+            map.reserveCapacity(4)
+            intMap.reserveCapacity(4)
         }
 
         private let parent: ParentStorage

@@ -24,13 +24,22 @@ public struct CBOREncoder {
     /// - Parameters:
     ///   - forceStringKeys: See ``EncodingOptions/forceStringKeys``.
     ///   - dateEncodingStrategy: See ``EncodingOptions/dateEncodingStrategy``.
+    ///   - rejectTaggedItems: See ``EncodingOptions/rejectTaggedItems``.
+    ///   - forceDoubleLengthEncoding: See ``EncodingOptions/forceDoubleLengthEncoding``.
+    ///   - rejectInfAndNan: See ``EncodingOptions/rejectInfAndNan``.
     public init(
         forceStringKeys: Bool = false,
-        dateEncodingStrategy: EncodingOptions.DateStrategy = .double
+        dateEncodingStrategy: EncodingOptions.DateStrategy = .double,
+        taggedItemsStrategy: EncodingOptions.TagStrategy = .accept,
+        forceDoubleLengthEncoding: Bool = false,
+        rejectInfAndNan: Bool = false
     ) {
         options = EncodingOptions(
             forceStringKeys: forceStringKeys,
-            dateEncodingStrategy: dateEncodingStrategy
+            dateEncodingStrategy: dateEncodingStrategy,
+            taggedItemsStrategy: taggedItemsStrategy,
+            forceDoubleLengthEncoding: forceDoubleLengthEncoding,
+            rejectInfAndNan: rejectInfAndNan
         )
     }
 
@@ -47,7 +56,7 @@ public struct CBOREncoder {
         let tempStorage = TopLevelTemporaryEncodingStorage()
 
         let encodingContext = EncodingContext(options: options)
-        let encoder = SingleValueCBOREncodingContainer(parent: tempStorage, context: encodingContext)
+        let encoder = try SingleValueCBOREncodingContainer(parent: tempStorage, context: encodingContext)
         try encoder.encode(value)
 
         let dataSize = tempStorage.value.size

@@ -107,6 +107,14 @@ internal extension Slice<UnsafeRawBufferPointer> {
         }
     }
 
+    @inline(__always)
+    @usableFromInline
+    func checkIntSize<T: FixedWidthInteger, F: FixedWidthInteger>(_ value: T, previousSize: F) throws {
+        guard value > previousSize else {
+            throw ScanError.unnecessaryInt
+        }
+    }
+
     @inlinable
     func readInt<T: FixedWidthInteger>(as: T.Type, argument: UInt8, from index: Index) throws -> T {
         let byteCount = argument
@@ -118,18 +126,22 @@ internal extension Slice<UnsafeRawBufferPointer> {
         case 24:
             let intVal = try read(as: UInt8.self, from: index)
             try checkIntConversion(T.self, val: intVal)
+            try checkIntSize(intVal, previousSize: Constants.maxArgSize)
             return T(intVal)
         case 25:
             let intVal = try read(as: UInt16.self, from: index)
             try checkIntConversion(T.self, val: intVal)
+            try checkIntSize(intVal, previousSize: UInt8.max)
             return T(intVal)
         case 26:
             let intVal = try read(as: UInt32.self, from: index)
             try checkIntConversion(T.self, val: intVal)
+            try checkIntSize(intVal, previousSize: UInt16.max)
             return T(intVal)
         case 27:
             let intVal = try read(as: UInt64.self, from: index)
             try checkIntConversion(T.self, val: intVal)
+            try checkIntSize(intVal, previousSize: UInt32.max)
             return T(intVal)
         default:
             throw ScanError.invalidSize(byte: byteCount, offset: startIndex)
