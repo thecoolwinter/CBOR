@@ -41,8 +41,6 @@ The motivation for this library over existing implementations is twofold: perfor
 - *NEW* IPLD compatible DAG-CBOR encoder for content addressable data.
 - *NEW* Flexible date decoding for untagged date items encoded as strings, floating point values, or integers.
 
-> Note: This is not a valid CBOR/CDE encoder, it merely always outputs countable collections. CBOR/CDE should be implemented in the future as it's quite similar.
-
 ## Usage
 
 ### Standard CBOR
