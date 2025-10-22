@@ -15,7 +15,9 @@ struct Profiling {
     func time(_ cbor: () throws -> Void, _ json: () throws -> Void) throws {
         guard #available(macOS 15.0, *) else { fatalError() }
         func calculateStats(_ measurements: [Duration]) -> (average: Double, stddev: Double) {
-            let values = measurements.map { Double($0.attoseconds) / 1e15 }
+            let values = measurements.map {
+                Double($0.components.seconds) + (Double($0.components.attoseconds) / 1e15)
+            }
             let avg = values.reduce(0, +) / Double(values.count)
 
             let variance = values.map { pow($0 - avg, 2) }.reduce(0, +) / Double(values.count)
