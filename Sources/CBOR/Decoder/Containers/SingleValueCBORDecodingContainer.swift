@@ -103,7 +103,7 @@ extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
         return value
     }
 
-    @available(macOS 15.0, *)
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
     func decode(_ type: Int128.Type) throws -> Int128 {
         try checkType(.uint, .nint, forType: Int128.self)
         let value = try data.readInt(as: Int128.self)
@@ -113,7 +113,7 @@ extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
         return value
     }
 
-    @available(macOS 15.0, *)
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
     func decode(_ type: UInt128.Type) throws -> UInt128 {
         try checkType(.uint, .nint, forType: UInt128.self)
         let value = try data.readInt(as: UInt128.self)
