@@ -22,8 +22,8 @@ func countToHeaderSize(_ count: Int) -> Int {
     return switch count {
     case 0...Int(UInt8.max): 1
     case 0...Int(UInt16.max): 2
-    case 0...Int(UInt32.max): 3
-    default: 4
+    case 0...Int(UInt32.max): 4
+    default: 8
     }
 }
 
