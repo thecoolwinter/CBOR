@@ -110,7 +110,7 @@ internal extension Slice<UnsafeRawBufferPointer> {
     @inline(__always)
     @usableFromInline
     func checkIntSize<T: FixedWidthInteger, F: FixedWidthInteger>(_ value: T, previousSize: F) throws {
-        guard value > previousSize else {
+        guard value >= previousSize else {
             throw ScanError.unnecessaryInt
         }
     }
