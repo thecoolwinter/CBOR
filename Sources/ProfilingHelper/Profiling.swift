@@ -13,7 +13,7 @@ struct Profiling {
     func blackhole(_ val: some Any) { }
 
     func time(_ cbor: () throws -> Void, _ json: () throws -> Void) throws {
-        guard #available(macOS 15.0, *) else { fatalError() }
+        guard #available(macOS 15.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *) else { fatalError() }
         func calculateStats(_ measurements: [Duration]) -> (average: Double, stddev: Double) {
             let values = measurements.map {
                 Double($0.components.seconds) + (Double($0.components.attoseconds) / 1e15)
