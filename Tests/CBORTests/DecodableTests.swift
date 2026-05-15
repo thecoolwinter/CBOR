@@ -25,8 +25,8 @@ struct DecodableTests {
         value = try CBORDecoder().decode(UInt8.self, from: [23])
         #expect(value == 23)
         // Just above max arg size
-//        value = try CBORDecoder().decode(UInt8.self, from: [24, 24])
-//        #expect(value == 24)
+        value = try CBORDecoder().decode(UInt8.self, from: [24, 24])
+        #expect(value == 24)
         // Max Int
         value = try CBORDecoder().decode(UInt8.self, from: [24, UInt8.max])
         #expect(value == UInt8.max)
@@ -45,11 +45,12 @@ struct DecodableTests {
         #expect(value == 0)
         value = try CBORDecoder().decode(UInt16.self, from: [1])
         #expect(value == 1)
-        // Just below max arg size
+
         value = try CBORDecoder().decode(UInt16.self, from: [23])
         #expect(value == 23)
-        // Just above max arg size
-        #expect(throws: DecodingError.self) { try CBORDecoder().decode(UInt16.self, from: [24, 24]) }
+
+        value = try CBORDecoder().decode(UInt16.self, from: [24, 24])
+        #expect(value == 24)
 
         #expect(throws: DecodingError.self) { try CBORDecoder().decode(UInt16.self, from: [128]) }
 

@@ -11,6 +11,14 @@ import FoundationEssentials
 import Foundation
 #endif
 
+public struct RawCBOR: Codable, Sendable {
+    public let data: Data
+
+    public init(data: Data) {
+        self.data = data
+    }
+}
+
 struct SingleValueCBORDecodingContainer: DecodingContextContainer {
     let context: DecodingContext
     let data: DataRegion
@@ -95,7 +103,7 @@ extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
             guard T.min < 0 else {
                 throw DecodingError.typeMismatch(
                     Int.self,
-                    context.error("Found a negative integer while attempting to decode an unsigned int \(T.self).")
+                    context.error("Found a negative integer while attempting t o decode an unsigned int \(T.self).")
                 )
             }
             return -1 - value
@@ -305,6 +313,8 @@ extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
             return try TaggedType.init(
                 decodeTaggedDataUsing: SingleValueCBORDecodingContainer(context: context, data: taggedData)
             ) as! T
+        } else if T.self == RawCBOR.self {
+            return RawCBOR(data: Data(data.slice)) as! T
         } else {
             return try T(from: self)
         }

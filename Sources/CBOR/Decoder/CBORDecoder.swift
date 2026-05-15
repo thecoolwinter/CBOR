@@ -59,7 +59,7 @@ public struct CBORDecoder {
     ///   - data: The CBOR data to decode from.
     /// - Returns: An instance of the decoded type.
     /// - Throws: A ``DecodingError`` with context and a debug description for a failed deserialization operation.
-    public func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+    public func decode<T: Decodable, D: ContiguousBytes>(_ type: T.Type, from data: D) throws -> T {
         do {
             return try data.withUnsafeBytes {
                 let data = $0[...]
@@ -96,7 +96,7 @@ public struct CBORDecoder {
     ///   - data: The CBOR data to decode from.
     /// - Returns: An instance of the decoded type.
     /// - Throws: A ``DecodingError`` with context and a debug description for a failed deserialization operation.
-    public func decodeMultiple<T: Decodable>(_ type: T.Type, from data: Data) throws -> [T] {
+    public func decodeMultiple<T: Decodable, D: ContiguousBytes>(_ type: T.Type, from data: D) throws -> [T] {
         do {
             return try data.withUnsafeBytes {
                 let data = $0[...]

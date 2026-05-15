@@ -51,7 +51,7 @@ struct UnkeyedCBORDecodingContainer: DecodingContextContainer, UnkeyedDecodingCo
     }
 
     mutating func decode<T: Decodable>(_ type: T.Type) throws -> T {
-        try T(from: consumeDecoder())
+        try consumeDecoder().decode(T.self)
     }
 
     mutating func nestedContainer<NestedKey: CodingKey>(

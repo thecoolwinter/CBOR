@@ -130,7 +130,7 @@ struct KeyedCBORDecodingContainer<Key: CodingKey>: DecodingContextContainer, Key
     func decode<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T {
         let region = try getRegion(forKey: key)
         let container = SingleValueCBORDecodingContainer(context: context.appending(key), data: region)
-        return try T.init(from: container)
+        return try container.decode(type)
     }
 
     func nestedContainer<NestedKey: CodingKey >(

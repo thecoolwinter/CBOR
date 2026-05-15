@@ -27,36 +27,36 @@ struct DataRegion {
     let childCount: Int?
     let mapOffset: Int
     // Does not include the type and argument byte
-    private let data: Slice<UnsafeRawBufferPointer>
+    let slice: Slice<UnsafeRawBufferPointer>
 
-    var count: Int { data.count }
-    var isEmpty: Bool { data.isEmpty }
-    var globalIndex: Int { data.startIndex }
+    var count: Int { slice.count }
+    var isEmpty: Bool { slice.isEmpty }
+    var globalIndex: Int { slice.startIndex }
 
     init(type: MajorType, argument: UInt8, childCount: Int?, mapOffset: Int, data: Slice<UnsafeRawBufferPointer>) {
         self.type = type
         self.argument = argument
         self.childCount = childCount
         self.mapOffset = mapOffset
-        self.data = data
+        self.slice = data
     }
 
     @inlinable
     subscript(index: Int) -> UInt8 {
-        data[data.startIndex + index]
+        slice[slice.startIndex + index]
     }
 
     subscript(range: Range<Int>) -> Slice<UnsafeRawBufferPointer> {
-        data[(data.startIndex + range.lowerBound)..<(data.startIndex + range.upperBound)]
+        slice[(slice.startIndex + range.lowerBound)..<(slice.startIndex + range.upperBound)]
     }
 
     @inline(__always)
     func canRead(_ numBytes: Int) -> Bool {
-        data.canRead(numBytes)
+        slice.canRead(numBytes)
     }
 
     func _peek() -> UInt8 {
-        data[data.startIndex]
+        slice[slice.startIndex]
     }
 
     func peek() -> UInt8? {
@@ -72,12 +72,12 @@ struct DataRegion {
     /// Reads the next variable-sized integer off the data stack.
     @inlinable
     func readInt<T: FixedWidthInteger>(as: T.Type) throws -> T {
-        try data.readInt(as: T.self, argument: argument)
+        try slice.readInt(as: T.self, argument: argument)
     }
 
     @inlinable
     func read<F: FixedWidthInteger>(as: F.Type) throws -> F {
-        try data.read(as: F.self)
+        try slice.read(as: F.self)
     }
 }
 
