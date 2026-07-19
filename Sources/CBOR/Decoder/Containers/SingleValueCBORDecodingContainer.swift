@@ -81,9 +81,23 @@ extension SingleValueCBORDecodingContainer: SingleValueDecodingContainer {
     }
 
     func decode(_: Double.Type) throws -> Double {
-        try checkType(.simple, arguments: 27, as: Double.self)
-        let doubleRaw = try data.read(as: UInt64.self).littleEndian
-        return try checkFloatValidity(Double(bitPattern: doubleRaw))
+        let arg = try checkType(.simple, arguments: 25, 26, 27, as: Double.self)
+        switch arg {
+        case 25:
+            let floatRaw = try data.read(as: UInt16.self)
+            guard let value = Float(halfPrecision: floatRaw) else {
+                throw DecodingError.dataCorrupted(
+                    context.error("Could not decode half-precision float into Swift Double.")
+                )
+            }
+            return try checkFloatValidity(Double(value))
+        case 26:
+            let floatRaw = try data.read(as: UInt32.self)
+            return try checkFloatValidity(Double(Float(bitPattern: floatRaw)))
+        default:
+            let doubleRaw = try data.read(as: UInt64.self).littleEndian
+            return try checkFloatValidity(Double(bitPattern: doubleRaw))
+        }
     }
 
     // MARK: - Integers

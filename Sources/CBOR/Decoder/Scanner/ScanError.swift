@@ -18,6 +18,8 @@ enum ScanError: Error {
     case unreadDataAfterEnd
     case rejectedUndefined
     case unnecessaryInt
+    case nonCanonicalMapKey(offset: Int, duplicate: Bool)
+    case nonCanonicalSimple(offset: Int)
 
     // swiftlint:disable:next cyclomatic_complexity function_body_length
     func decodingError() -> DecodingError {
@@ -95,6 +97,23 @@ enum ScanError: Error {
                 .init(
                     codingPath: [],
                     debugDescription: "Found integer that was encoded in a larger data format than necessary",
+                    underlyingError: self
+                )
+            )
+        case let .nonCanonicalMapKey(offset, duplicate):
+            let reason = duplicate ? "duplicate" : "out of core deterministic order"
+            return DecodingError.dataCorrupted(
+                .init(
+                    codingPath: [],
+                    debugDescription: "Found map key that is \(reason) at offset \(offset)",
+                    underlyingError: self
+                )
+            )
+        case let .nonCanonicalSimple(offset):
+            return DecodingError.dataCorrupted(
+                .init(
+                    codingPath: [],
+                    debugDescription: "Found non-canonical simple or floating-point value at offset \(offset)",
                     underlyingError: self
                 )
             )

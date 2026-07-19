@@ -57,14 +57,18 @@ extension SingleValueCBOREncodingContainer: SingleValueEncodingContainer {
                 context.error("Configured to reject Inf and NaN values. Found Infinite or NaN floating point value.")
             )
         }
-        parent.register(DoubleOptimizer(value: value))
+        if options.forceDoubleLengthEncoding {
+            parent.register(DoubleOptimizer(value: value))
+        } else {
+            parent.register(PreferredFloatOptimizer(value: value))
+        }
     }
 
     func encode(_ value: Float) throws {
         if options.forceDoubleLengthEncoding {
             try encode(Double(value))
         } else {
-            parent.register(FloatOptimizer(value: value))
+            parent.register(PreferredFloatOptimizer(value: Double(value)))
         }
     }
 

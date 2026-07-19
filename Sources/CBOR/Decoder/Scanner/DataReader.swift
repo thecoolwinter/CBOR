@@ -103,4 +103,22 @@ struct DataReader {
 
     @inlinable
     func slice(_ range: Range<Int>) -> Slice<UnsafeRawBufferPointer> { data[range] }
+
+    /// Compares complete encoded map keys using core deterministic order:
+    /// encoded length first, then bytewise lexical order. A zero result means
+    /// the key encodings are duplicates.
+    func compareEncodedKeys(_ lhs: Range<Int>, _ rhs: Range<Int>) -> Int {
+        if lhs.count != rhs.count {
+            return lhs.count < rhs.count ? -1 : 1
+        }
+
+        for offset in 0..<lhs.count {
+            let lhsByte = data[data.startIndex + lhs.lowerBound + offset]
+            let rhsByte = data[data.startIndex + rhs.lowerBound + offset]
+            if lhsByte != rhsByte {
+                return lhsByte < rhsByte ? -1 : 1
+            }
+        }
+        return 0
+    }
 }
