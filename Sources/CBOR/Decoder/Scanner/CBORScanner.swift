@@ -97,6 +97,15 @@ struct CBORScanner {
         let offset = reader.index
         results.recordType(raw, currentByteIndex: offset, length: size)
         guard reader.canRead(size) else { throw ScanError.unexpectedEndOfData }
+        if options.rejectNonCanonical {
+            // Validate the argument width even when the eventual Decodable type
+            // ignores this value. DataRegion performs the same check on consumed
+            // integers, but canonical validation must cover the complete object.
+            _ = try reader.slice(offset..<(offset + size)).readInt(
+                as: UInt64.self,
+                argument: raw & 0b0001_1111
+            )
+        }
         reader.pop(size)
     }
 
@@ -111,6 +120,9 @@ struct CBORScanner {
         results.recordSimple(reader.pop(), currentByteIndex: idx)
         guard reader.canRead(raw.simpleLength()) else {
             throw ScanError.unexpectedEndOfData
+        }
+        if options.rejectNonCanonical {
+            try validatePreferredSimple(raw: raw, offset: idx)
         }
         reader.pop(raw.simpleLength())
     }
@@ -127,7 +139,8 @@ struct CBORScanner {
             return
         }
 
-        if (type == .string || type == .bytes) && options.rejectIndeterminateLengths {
+        if (type == .string || type == .bytes)
+            && (options.rejectIndeterminateLengths || options.rejectNonCanonical) {
             throw ScanError.rejectedIndeterminateLength(type: type, offset: reader.index)
         }
 
@@ -165,7 +178,7 @@ struct CBORScanner {
             return
         }
 
-        if options.rejectIndeterminateLengths {
+        if options.rejectIndeterminateLengths || options.rejectNonCanonical {
             throw ScanError.rejectedIndeterminateLength(type: .array, offset: reader.index)
         }
 
@@ -190,24 +203,37 @@ struct CBORScanner {
                 throw ScanError.cannotRepresentInt(max: UInt(Int.max), found: UInt(keyCount) * 2, offset: reader.index)
             }
 
-            let size = keyCount * 2
             let mapIdx = results.recordMapStart(currentByteIndex: reader.index)
-            for _ in 0..<size {
+            var previousKey: Range<Int>?
+            for _ in 0..<keyCount {
+                let keyStart = reader.index
+                try scanNext(depth: depth + 1)
+                let keyRange = keyStart..<reader.index
+                try validateMapKeyOrder(previous: previousKey, current: keyRange)
+                previousKey = keyRange
+
                 try scanNext(depth: depth + 1)
             }
+            let size = keyCount * 2
             results.recordEnd(childCount: size, resultLocation: mapIdx, currentByteIndex: reader.index)
             return
         }
 
-        if options.rejectIndeterminateLengths {
+        if options.rejectIndeterminateLengths || options.rejectNonCanonical {
             throw ScanError.rejectedIndeterminateLength(type: .map, offset: reader.index)
         }
 
         let mapIdx = results.recordMapStart(currentByteIndex: reader.index)
         reader.pop() // Pop type
         var count = 0
+        var previousKey: Range<Int>?
         while reader.peek() != Constants.breakCode {
-            try scanNext(depth: depth + 1) // Maps should always have a multiple of two values.
+            let keyStart = reader.index
+            try scanNext(depth: depth + 1)
+            let keyRange = keyStart..<reader.index
+            try validateMapKeyOrder(previous: previousKey, current: keyRange)
+            previousKey = keyRange
+
             try scanNext(depth: depth + 1)
             count += 2
         }
@@ -246,5 +272,48 @@ extension CBORScanner {
 
     private func peekIsIndeterminate() -> Bool {
         (reader.peekArgument() ?? 0) == 0b1_1111
+    }
+
+    private func validateMapKeyOrder(previous: Range<Int>?, current: Range<Int>) throws {
+        guard options.rejectUnorderedMap || options.rejectNonCanonical,
+              let previous else {
+            return
+        }
+
+        let comparison = reader.compareEncodedKeys(previous, current)
+        guard comparison < 0 else {
+            throw ScanError.nonCanonicalMapKey(
+                offset: current.lowerBound,
+                duplicate: comparison == 0
+            )
+        }
+    }
+
+    private func validatePreferredSimple(raw: UInt8, offset: Int) throws {
+        let argument = raw & 0b0001_1111
+        let payloadStart = reader.index
+
+        switch argument {
+        case 0...23:
+            return
+        case 24:
+            let value = try reader.slice(payloadStart..<(payloadStart + 1)).read(as: UInt8.self)
+            guard value >= 32 else { throw ScanError.nonCanonicalSimple(offset: offset) }
+        case 25:
+            let bits = try reader.slice(payloadStart..<(payloadStart + 2)).read(as: UInt16.self)
+            if let value = Float(halfPrecision: bits), value.isNaN, bits != 0x7e00 {
+                throw ScanError.nonCanonicalSimple(offset: offset)
+            }
+        case 26:
+            let bits = try reader.slice(payloadStart..<(payloadStart + 4)).read(as: UInt32.self)
+            let preferred = PreferredFloatOptimizer(value: Double(Float(bitPattern: bits)))
+            guard preferred.argument == 26 else { throw ScanError.nonCanonicalSimple(offset: offset) }
+        case 27:
+            let bits = try reader.slice(payloadStart..<(payloadStart + 8)).read(as: UInt64.self)
+            let preferred = PreferredFloatOptimizer(value: Double(bitPattern: bits))
+            guard preferred.argument == 27 else { throw ScanError.nonCanonicalSimple(offset: offset) }
+        default:
+            throw ScanError.nonCanonicalSimple(offset: offset)
+        }
     }
 }

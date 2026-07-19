@@ -49,7 +49,8 @@ struct DecodableTests {
         value = try CBORDecoder().decode(UInt16.self, from: [23])
         #expect(value == 23)
         // Just above max arg size
-        #expect(throws: DecodingError.self) { try CBORDecoder().decode(UInt16.self, from: [24, 24]) }
+        value = try CBORDecoder().decode(UInt16.self, from: [24, 24])
+        #expect(value == 24)
 
         #expect(throws: DecodingError.self) { try CBORDecoder().decode(UInt16.self, from: [128]) }
 

@@ -36,6 +36,12 @@ public struct DecodingOptions {
     /// are multiple top-level objects.
     public var singleTopLevelItem: Bool
 
+    /// Reject any representation that is not a core deterministic encoding.
+    ///
+    /// Validation is performed by the scanner over the complete CBOR object,
+    /// including values ignored by the requested `Decodable` type.
+    public var rejectNonCanonical: Bool
+
     /// Create a new options object.
     public init(
         rejectIndeterminateLengths: Bool = true,
@@ -45,7 +51,8 @@ public struct DecodingOptions {
         rejectUndefined: Bool = false,
         rejectNaN: Bool = false,
         rejectInf: Bool = false,
-        singleTopLevelItem: Bool = false
+        singleTopLevelItem: Bool = false,
+        rejectNonCanonical: Bool = false
     ) {
         self.rejectIndeterminateLengths = rejectIndeterminateLengths
         self.recursionDepth = recursionDepth
@@ -55,5 +62,6 @@ public struct DecodingOptions {
         self.rejectNaN = rejectNaN
         self.rejectInf = rejectInf
         self.singleTopLevelItem = singleTopLevelItem
+        self.rejectNonCanonical = rejectNonCanonical
     }
 }

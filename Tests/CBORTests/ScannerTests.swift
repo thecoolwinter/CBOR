@@ -17,7 +17,8 @@ import Testing
 struct ScannerTests {
     @Test(arguments: [(24, 1), (25, 2), (26, 4), (27, 8)])
     func int(argument: UInt8, byteCount: Int) throws {
-        let data = Data([argument] + Array(repeating: UInt8.zero, count: byteCount))
+        let payload = minimalPayload(byteCount: byteCount)
+        let data = Data([argument] + payload)
         try data.withUnsafeBytes {
             let data = $0[...]
 
@@ -47,13 +48,24 @@ struct ScannerTests {
 
     @Test(arguments: [(24, 1), (25, 2), (26, 4), (27, 8)])
     func nint(argument: UInt8, byteCount: Int) throws {
-        let data = Data([MajorType.nint.bits | argument] + Array(repeating: UInt8.zero, count: byteCount))
+        let payload = minimalPayload(byteCount: byteCount)
+        let data = Data([MajorType.nint.bits | argument] + payload)
         try data.withUnsafeBytes {
             let data = $0[...]
             let scanner = CBORScanner(data: DataReader(data: data))
             let results = try scanner.scan()
             let map = results.contents()
             #expect(map == [Int(MajorType.nint.bits | argument), 1, byteCount])
+        }
+    }
+
+    private func minimalPayload(byteCount: Int) -> [UInt8] {
+        switch byteCount {
+        case 1: [0x18]
+        case 2: [0x01, 0x00]
+        case 4: [0x00, 0x01, 0x00, 0x00]
+        case 8: [0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]
+        default: preconditionFailure("Unsupported integer width")
         }
     }
 

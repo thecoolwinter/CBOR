@@ -10,25 +10,13 @@ func KeyedOptimizer(value: [String: EncodingOptimizer]) -> EncodingOptimizer {
     if value.count < Constants.maxArgSize {
         return SmallKeyedOptimizer(
             value: value,
-            orderedUsing: { lhs, rhs in
-                if lhs.key.count == rhs.key.count {
-                    return lhs.key < rhs.key
-                }
-
-                return lhs.key.count < rhs.key.count
-            },
+            orderedUsing: { coreDeterministicStringKeyPrecedes($0.key, $1.key) },
             optimizer: { StringOptimizer(value: $0) }
         )
     } else {
         return LargeKeyedOptimizer(
             value: value,
-            orderedUsing: { lhs, rhs in
-                if lhs.key.count == rhs.key.count {
-                    return lhs.key < rhs.key
-                }
-
-                return lhs.key.count < rhs.key.count
-            },
+            orderedUsing: { coreDeterministicStringKeyPrecedes($0.key, $1.key) },
             optimizer: { StringOptimizer(value: $0) }
         )
     }
@@ -39,15 +27,59 @@ func KeyedOptimizer(value: [Int: EncodingOptimizer]) -> EncodingOptimizer {
     if value.count < Constants.maxArgSize {
         return SmallKeyedOptimizer(
             value: value,
-            orderedUsing: { $0.key < $1.key },
+            orderedUsing: { coreDeterministicIntKeyPrecedes($0.key, $1.key) },
             optimizer: { IntOptimizer(value: $0) }
         )
     } else {
         return LargeKeyedOptimizer(
             value: value,
-            orderedUsing: { $0.key < $1.key },
+            orderedUsing: { coreDeterministicIntKeyPrecedes($0.key, $1.key) },
             optimizer: { IntOptimizer(value: $0) }
         )
+    }
+}
+
+/// Core deterministic ordering compares the complete encoded keys by encoded
+/// length and then lexicographically. For strings of equal UTF-8 length, the
+/// CBOR headers are identical, so comparing the payload bytes is equivalent to
+/// comparing the complete encodings.
+@inlinable
+func coreDeterministicStringKeyPrecedes(_ lhs: String, _ rhs: String) -> Bool {
+    let lhsBytes = lhs.utf8
+    let rhsBytes = rhs.utf8
+    if lhsBytes.count != rhsBytes.count {
+        return lhsBytes.count < rhsBytes.count
+    }
+    return lhsBytes.lexicographicallyPrecedes(rhsBytes)
+}
+
+/// Integer keys use their complete CBOR encoding for deterministic ordering.
+/// Within a fixed encoded width and major type, the big-endian payload order is
+/// the same as the order of the encoded non-negative argument.
+@inlinable
+func coreDeterministicIntKeyPrecedes(_ lhs: Int, _ rhs: Int) -> Bool {
+    let lhsArgument = lhs < 0 ? UInt(-1 - lhs) : UInt(lhs)
+    let rhsArgument = rhs < 0 ? UInt(-1 - rhs) : UInt(rhs)
+    let lhsSize = coreDeterministicIntSize(lhsArgument)
+    let rhsSize = coreDeterministicIntSize(rhsArgument)
+
+    if lhsSize != rhsSize {
+        return lhsSize < rhsSize
+    }
+    if (lhs < 0) != (rhs < 0) {
+        return lhs >= 0
+    }
+    return lhsArgument < rhsArgument
+}
+
+@inlinable
+func coreDeterministicIntSize(_ argument: UInt) -> Int {
+    switch argument {
+    case 0..<UInt(Constants.maxArgSize): 1
+    case 0...UInt(UInt8.max): 2
+    case 0...UInt(UInt16.max): 3
+    case 0...UInt(UInt32.max): 5
+    default: 9
     }
 }
 
