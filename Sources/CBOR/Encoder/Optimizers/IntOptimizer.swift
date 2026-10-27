@@ -1,6 +1,6 @@
 //
 //  IntOptimizer.swift
-//  SwiftCBOR
+//  CBOR
 //
 //  Created by Khan Winter on 8/17/25.
 //
