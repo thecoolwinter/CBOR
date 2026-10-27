@@ -5,7 +5,7 @@ The `Fuzzing` target allows the library to be fuzzed using libfuzzer.
 First build the package in release mode with the fuzzer and address checkers on:
 
 ```bash
-swift build -c release --sanitize fuzzer
+swift build -c release --product Fuzzing
 ```
 
 Then run it:
