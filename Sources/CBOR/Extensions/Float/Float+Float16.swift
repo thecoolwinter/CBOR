@@ -19,7 +19,7 @@ extension Float {
         case 0x7c00:
             self = .infinity
         case 0xfc00:
-            self = .infinity
+            self = -.infinity
         default:
             var t1 = UInt32(x & 0x7fff)        // Non-sign bits
             var t2 = UInt32(x & 0x8000)        // Sign bit

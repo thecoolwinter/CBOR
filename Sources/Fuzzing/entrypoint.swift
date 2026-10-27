@@ -70,6 +70,9 @@ public func fuzz(_ start: UnsafeRawPointer, _ count: Int) -> CInt {
     // Any decodable
     tryDecode(AnyDecodable.self)
 
+    // Adversarial containers
+    tryDecode(Overread.self)
+
     // Encode
     do {
         try blackhole(CBOREncoder().encode(Data(bytes: start, count: count)))

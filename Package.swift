@@ -13,8 +13,7 @@ let package = Package(
         .executableTarget(
             name: "Fuzzing",
             dependencies: ["CBOR"],
-            swiftSettings: [.unsafeFlags(["-parse-as-library", "-sanitize=fuzzer"])],
-            linkerSettings: [.unsafeFlags(["-sanitize=fuzzer"])]
+            swiftSettings: [.unsafeFlags(["-parse-as-library"])]
         ),
         .executableTarget(name: "ProfilingHelper", dependencies: ["CBOR"]),
         .testTarget(

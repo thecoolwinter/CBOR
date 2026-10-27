@@ -34,6 +34,10 @@ struct UnkeyedCBORDecodingContainer: DecodingContextContainer, UnkeyedDecodingCo
 
     /// Consumes one decoder off the scanned array.
     private mutating func consumeDecoder() throws -> SingleValueCBORDecodingContainer {
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(Any.self, context.error("Reached end of container."))
+        }
+
         defer {
             currentIndex += 1
             currentMapIndex = context.results.siblingIndex(currentMapIndex)
@@ -47,7 +51,10 @@ struct UnkeyedCBORDecodingContainer: DecodingContextContainer, UnkeyedDecodingCo
     }
 
     mutating func decodeNil() throws -> Bool {
-        context.results.load(at: currentMapIndex).isNil()
+        guard !isAtEnd else {
+            throw DecodingError.valueNotFound(Any.self, context.error("Reached end of container."))
+        }
+        return context.results.load(at: currentMapIndex).isNil()
     }
 
     mutating func decode<T: Decodable>(_ type: T.Type) throws -> T {
