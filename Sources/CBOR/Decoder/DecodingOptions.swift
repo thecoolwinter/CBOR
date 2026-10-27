@@ -14,6 +14,8 @@ public struct DecodingOptions {
     public var rejectIndeterminateLengths: Bool
 
     /// Maximum recursion depth.
+    /// - Warning: Increasing this *may* allow untrusted input to crash your application.
+    ///            Until the new Codable APIs release for Swift, there must be a hard recursion limit.
     public var recursionDepth: Int = 50
 
     /// Reject maps with non-string keys..
@@ -36,6 +38,9 @@ public struct DecodingOptions {
     /// are multiple top-level objects.
     public var singleTopLevelItem: Bool
 
+    /// A user-provided dictionary.
+    public var userInfo: [CodingUserInfoKey: Any]
+
     /// Create a new options object.
     public init(
         rejectIndeterminateLengths: Bool = true,
@@ -45,7 +50,8 @@ public struct DecodingOptions {
         rejectUndefined: Bool = false,
         rejectNaN: Bool = false,
         rejectInf: Bool = false,
-        singleTopLevelItem: Bool = false
+        singleTopLevelItem: Bool = false,
+        userInfo: [CodingUserInfoKey: Any] = [:]
     ) {
         self.rejectIndeterminateLengths = rejectIndeterminateLengths
         self.recursionDepth = recursionDepth
@@ -55,5 +61,6 @@ public struct DecodingOptions {
         self.rejectNaN = rejectNaN
         self.rejectInf = rejectInf
         self.singleTopLevelItem = singleTopLevelItem
+        self.userInfo = userInfo
     }
 }
