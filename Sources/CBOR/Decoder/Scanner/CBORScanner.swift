@@ -226,7 +226,12 @@ struct CBORScanner {
             throw ScanError.unexpectedEndOfData
         }
 
-        try scanType(type: nextTag, raw: nextRaw, depth: depth)
+        // We may decode another tag here, which skips the check in `scanNext` so this check is necessary.
+        guard depth < options.recursionDepth else {
+            throw ScanError.recursionLimit
+        }
+
+        try scanType(type: nextTag, raw: nextRaw, depth: depth + 1)
     }
 }
 
