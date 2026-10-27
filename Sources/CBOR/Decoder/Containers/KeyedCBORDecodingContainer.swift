@@ -148,7 +148,8 @@ struct KeyedCBORDecodingContainer<Key: CodingKey>: DecodingContextContainer, Key
     }
 
     func superDecoder(forKey key: Key) throws -> any Decoder {
-        fatalError()
+        let region = try getRegion(forKey: key)
+        return SingleValueCBORDecodingContainer(context: context.appending(key), data: region)
     }
 
     func superDecoder() throws -> any Decoder {
